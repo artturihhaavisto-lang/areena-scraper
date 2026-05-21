@@ -276,11 +276,15 @@ def draw_menu(stdscr, title: str, rows: list[str], selected: int, footer: str) -
     stdscr.refresh()
 
 
-def season_screen(stdscr, series_title: str, seasons: list[Season]) -> bool:
+def controls_footer(options: Options, action: str) -> str:
+    return f"Space toggle  a all  n none  d directory  Enter {action}  q quit  dir: {options.output_dir}"
+
+
+def season_screen(stdscr, series_title: str, seasons: list[Season], options: Options) -> bool:
     selected = 0
     while True:
         rows = [f"[{'x' if s.selected else ' '}] {s.title} ({s.season_id})" for s in seasons]
-        draw_menu(stdscr, f"Areena: {series_title} - seasons", rows, selected, "Space toggle  a all  n none  Enter continue  q quit")
+        draw_menu(stdscr, f"Areena: {series_title} - seasons", rows, selected, controls_footer(options, "continue"))
         key = stdscr.getch()
         if key in (curses.KEY_UP, ord("k")):
             selected = max(0, selected - 1)
@@ -294,13 +298,16 @@ def season_screen(stdscr, series_title: str, seasons: list[Season]) -> bool:
         elif key == ord("n"):
             for season in seasons:
                 season.selected = False
+        elif key == ord("d"):
+            options.output_dir = prompt_output_dir(stdscr, options.output_dir)
+            save_options(options)
         elif key in (10, 13):
             return any(s.selected for s in seasons)
         elif key == ord("q"):
             return False
 
 
-def episode_screen(stdscr, episodes: list[Episode]) -> bool:
+def episode_screen(stdscr, episodes: list[Episode], options: Options) -> bool:
     selected = 0
     while True:
         rows = []
@@ -309,7 +316,7 @@ def episode_screen(stdscr, episodes: list[Episode]) -> bool:
             if ep.season_number and ep.episode_number:
                 code = f"S{ep.season_number:02d}E{ep.episode_number:02d} "
             rows.append(f"[{'x' if ep.selected else ' '}] {code}{ep.title} [{ep.item_id}]")
-        draw_menu(stdscr, "Episodes", rows, selected, "Space toggle  a all  n none  Enter options  q back/quit")
+        draw_menu(stdscr, "Episodes", rows, selected, controls_footer(options, "options"))
         key = stdscr.getch()
         if key in (curses.KEY_UP, ord("k")):
             selected = max(0, selected - 1)
@@ -323,6 +330,9 @@ def episode_screen(stdscr, episodes: list[Episode]) -> bool:
         elif key == ord("n"):
             for ep in episodes:
                 ep.selected = False
+        elif key == ord("d"):
+            options.output_dir = prompt_output_dir(stdscr, options.output_dir)
+            save_options(options)
         elif key in (10, 13):
             return any(ep.selected for ep in episodes)
         elif key == ord("q"):
@@ -512,16 +522,16 @@ def app(stdscr, url: str | None) -> None:
     stdscr.addstr(0, 0, "Loading Areena series...")
     stdscr.refresh()
     series, seasons, list_uri, app_id, app_key = load_series(url)
-    if not season_screen(stdscr, series, seasons):
+    options = load_options()
+    if not season_screen(stdscr, series, seasons, options):
         return
     chosen_seasons = [s for s in seasons if s.selected]
     stdscr.erase()
     stdscr.addstr(0, 0, "Loading episode list...")
     stdscr.refresh()
     episodes = load_episodes(list_uri, chosen_seasons, app_id, app_key)
-    if not episodes or not episode_screen(stdscr, episodes):
+    if not episodes or not episode_screen(stdscr, episodes, options):
         return
-    options = load_options()
     if not options_screen(stdscr, options, len([ep for ep in episodes if ep.selected])):
         return
     Path(options.output_dir).mkdir(parents=True, exist_ok=True)

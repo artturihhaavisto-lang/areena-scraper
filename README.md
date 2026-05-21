@@ -29,6 +29,7 @@ Keyboard:
 - `Space`: toggle selection
 - `a`: select all
 - `n`: select none
+- `d`: set download directory
 - `Enter`: continue/start
 - `q`: cancel, or exit the progress screen after completion
 
@@ -39,7 +40,7 @@ Oktonautit/Season 04/S04E01 - Erikoisjakso - Oktonautit ja suuri suoseikkailu.mp
 ```
 
 Options include quality, subtitles, download directory, parallel downloads, and dry-run mode.
-Select `Download directory` in the options screen and press `Enter` to type a new folder.
+Press `d` on the season or episode selection screens, or select `Download directory` in the options screen, to type a new folder.
 
 The selected output folder, quality, subtitle setting, and parallel download count are saved to:
 
