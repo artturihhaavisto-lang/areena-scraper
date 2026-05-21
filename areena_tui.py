@@ -266,14 +266,22 @@ def dedupe_episodes(episodes: list[Episode]) -> list[Episode]:
 def draw_menu(stdscr, title: str, rows: list[str], selected: int, footer: str) -> None:
     stdscr.erase()
     h, w = stdscr.getmaxyx()
-    stdscr.addnstr(0, 0, title, w - 1, curses.A_BOLD)
+    safe_addnstr(stdscr, 0, 0, title, w - 1, curses.A_BOLD)
     usable = max(1, h - 4)
     start = max(0, min(selected - usable // 2, max(0, len(rows) - usable)))
     for i, row in enumerate(rows[start : start + usable], start):
         attr = curses.A_REVERSE if i == selected else curses.A_NORMAL
-        stdscr.addnstr(2 + i - start, 0, row, w - 1, attr)
-    stdscr.addnstr(h - 1, 0, footer, w - 1, curses.A_DIM)
+        safe_addnstr(stdscr, 2 + i - start, 0, row, w - 1, attr)
+    safe_addnstr(stdscr, h - 1, 0, footer, w - 1, curses.A_DIM)
     stdscr.refresh()
+
+
+def safe_addnstr(stdscr, y: int, x: int, text: str, width: int, attr: int = curses.A_NORMAL) -> bool:
+    h, w = stdscr.getmaxyx()
+    if y < 0 or y >= h or x < 0 or x >= w:
+        return False
+    stdscr.addnstr(y, x, text, max(0, min(width, w - x - 1)), attr)
+    return True
 
 
 def controls_footer(options: Options, action: str) -> str:
@@ -481,17 +489,22 @@ def progress_screen(stdscr, series: str, episodes: list[Episode], options: Optio
             pass
         stdscr.erase()
         h, w = stdscr.getmaxyx()
-        stdscr.addnstr(0, 0, f"{series} - {done}/{len(selected)} complete", w - 1, curses.A_BOLD)
+        safe_addnstr(stdscr, 0, 0, f"{series} - {done}/{len(selected)} complete", w - 1, curses.A_BOLD)
         row = 2
-        for ep in selected[: max(1, h // 2 - 2)]:
+        max_status_rows = max(0, min(len(selected), h // 2 - 2))
+        for ep in selected[:max_status_rows]:
             line = f"{ep.item_id} {ep.title}: {status.get(ep.item_id, '')}"
-            stdscr.addnstr(row, 0, line, w - 1)
+            safe_addnstr(stdscr, row, 0, line, w - 1)
             row += 1
-        stdscr.addnstr(row + 1, 0, "Recent output", w - 1, curses.A_BOLD)
-        for line in log[-max(1, h - row - 4) :]:
+
+        recent_header = row + 1
+        safe_addnstr(stdscr, recent_header, 0, "Recent output", w - 1, curses.A_BOLD)
+        row = recent_header
+        max_log_rows = max(0, h - row - 2)
+        for line in log[-max_log_rows:]:
             row += 1
-            stdscr.addnstr(row, 0, line, w - 1, curses.A_DIM)
-        stdscr.addnstr(h - 1, 0, "Press q after completion", w - 1, curses.A_DIM)
+            safe_addnstr(stdscr, row, 0, line, w - 1, curses.A_DIM)
+        safe_addnstr(stdscr, h - 1, 0, "Press q after completion", w - 1, curses.A_DIM)
         stdscr.refresh()
     while stdscr.getch() != ord("q"):
         pass
