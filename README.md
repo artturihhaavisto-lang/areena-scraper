@@ -38,7 +38,8 @@ The default output directory is `~/Lataukset`. Files are named like:
 Oktonautit/Season 04/S04E01 - Erikoisjakso - Oktonautit ja suuri suoseikkailu.mp4
 ```
 
-Options include quality, subtitles, output folder, parallel downloads, and dry-run mode.
+Options include quality, subtitles, download directory, parallel downloads, and dry-run mode.
+Select `Download directory` in the options screen and press `Enter` to type a new folder.
 
 The selected output folder, quality, subtitle setting, and parallel download count are saved to:
 

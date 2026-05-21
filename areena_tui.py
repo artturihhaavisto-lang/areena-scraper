@@ -329,14 +329,30 @@ def episode_screen(stdscr, episodes: list[Episode]) -> bool:
             return False
 
 
+def prompt_output_dir(stdscr, current: str) -> str:
+    curses.curs_set(1)
+    curses.echo()
+    stdscr.erase()
+    h, w = stdscr.getmaxyx()
+    stdscr.addnstr(0, 0, "Download directory", w - 1, curses.A_BOLD)
+    stdscr.addnstr(2, 0, f"Current: {current}", w - 1)
+    stdscr.addnstr(4, 0, "Enter new directory, or leave empty to keep current.", w - 1, curses.A_DIM)
+    stdscr.addstr(6, 0, "Directory: ")
+    stdscr.refresh()
+    value = stdscr.getstr(6, 11, max(1, w - 12)).decode().strip()
+    curses.noecho()
+    curses.curs_set(0)
+    return os.path.abspath(os.path.expanduser(value)) if value else current
+
+
 def options_screen(stdscr, options: Options, count: int) -> bool:
-    fields = ["Quality", "Subtitles", "Output dir", "Concurrency", "Dry run", "Start"]
+    fields = ["Quality", "Subtitles", "Download directory", "Concurrency", "Dry run", "Start"]
     selected = 0
     while True:
         rows = [
             f"Quality: {options.quality}",
             f"Download subtitles: {'yes' if options.subtitles else 'no'}",
-            f"Output directory: {options.output_dir}",
+            f"Download directory: {options.output_dir}",
             f"Parallel downloads: {options.concurrency}",
             f"Dry run only: {'yes' if options.dry_run else 'no'}",
             f"Start download queue ({count} selected)",
@@ -356,15 +372,8 @@ def options_screen(stdscr, options: Options, count: int) -> bool:
             elif selected == 1:
                 options.subtitles = not options.subtitles
             elif selected == 2:
-                curses.echo()
-                curses.curs_set(1)
-                stdscr.addstr(curses.LINES - 2, 0, "Output directory: ".ljust(curses.COLS - 1))
-                stdscr.addstr(curses.LINES - 2, 18, options.output_dir[: max(0, curses.COLS - 19)])
-                value = stdscr.getstr(curses.LINES - 2, 18, 300).decode().strip()
-                curses.noecho()
-                curses.curs_set(0)
-                if value:
-                    options.output_dir = os.path.expanduser(value)
+                options.output_dir = prompt_output_dir(stdscr, options.output_dir)
+                save_options(options)
             elif selected == 3:
                 options.concurrency = 1 if options.concurrency >= 4 else options.concurrency + 1
             elif selected == 4:
