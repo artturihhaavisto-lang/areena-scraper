@@ -20,6 +20,7 @@ USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/137 Safa
 AREENA_ORIGIN = "https://areena.yle.fi"
 PLAYER_APP_ID = "player_static_prod"
 PLAYER_APP_KEY = "8930d72170e48303cf5f3867780d549b"
+CONFIG_PATH = Path.home() / ".config" / "areena-scraper" / "config.json"
 
 
 @dataclass
@@ -47,6 +48,47 @@ class Options:
     output_dir: str = str(Path.home() / "Lataukset")
     concurrency: int = 1
     dry_run: bool = False
+
+
+def load_options() -> Options:
+    options = Options()
+    try:
+        data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return options
+    except Exception:
+        return options
+
+    if isinstance(data.get("quality"), str):
+        options.quality = data["quality"]
+    if isinstance(data.get("subtitles"), bool):
+        options.subtitles = data["subtitles"]
+    if isinstance(data.get("output_dir"), str) and data["output_dir"].strip():
+        options.output_dir = os.path.expanduser(data["output_dir"].strip())
+    if isinstance(data.get("concurrency"), int):
+        options.concurrency = max(1, min(4, data["concurrency"]))
+    if isinstance(data.get("dry_run"), bool):
+        options.dry_run = data["dry_run"]
+    return options
+
+
+def save_options(options: Options) -> None:
+    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    CONFIG_PATH.write_text(
+        json.dumps(
+            {
+                "quality": options.quality,
+                "subtitles": options.subtitles,
+                "output_dir": options.output_dir,
+                "concurrency": options.concurrency,
+                "dry_run": options.dry_run,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 def request_text(url: str) -> str:
@@ -315,9 +357,12 @@ def options_screen(stdscr, options: Options, count: int) -> bool:
                 options.subtitles = not options.subtitles
             elif selected == 2:
                 curses.echo()
+                curses.curs_set(1)
                 stdscr.addstr(curses.LINES - 2, 0, "Output directory: ".ljust(curses.COLS - 1))
-                value = stdscr.getstr(curses.LINES - 2, 18, 200).decode().strip()
+                stdscr.addstr(curses.LINES - 2, 18, options.output_dir[: max(0, curses.COLS - 19)])
+                value = stdscr.getstr(curses.LINES - 2, 18, 300).decode().strip()
                 curses.noecho()
+                curses.curs_set(0)
                 if value:
                     options.output_dir = os.path.expanduser(value)
             elif selected == 3:
@@ -325,6 +370,7 @@ def options_screen(stdscr, options: Options, count: int) -> bool:
             elif selected == 4:
                 options.dry_run = not options.dry_run
             elif selected == 5:
+                save_options(options)
                 return True
 
 
@@ -466,7 +512,7 @@ def app(stdscr, url: str | None) -> None:
     episodes = load_episodes(list_uri, chosen_seasons, app_id, app_key)
     if not episodes or not episode_screen(stdscr, episodes):
         return
-    options = Options()
+    options = load_options()
     if not options_screen(stdscr, options, len([ep for ep in episodes if ep.selected])):
         return
     Path(options.output_dir).mkdir(parents=True, exist_ok=True)

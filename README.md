@@ -39,3 +39,9 @@ Oktonautit/Season 04/S04E01 - Erikoisjakso - Oktonautit ja suuri suoseikkailu.mp
 ```
 
 Options include quality, subtitles, output folder, parallel downloads, and dry-run mode.
+
+The selected output folder, quality, subtitle setting, and parallel download count are saved to:
+
+```text
+~/.config/areena-scraper/config.json
+```
