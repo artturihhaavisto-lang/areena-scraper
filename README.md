@@ -41,6 +41,7 @@ Oktonautit/Season 04/S04E01 - Erikoisjakso - Oktonautit ja suuri suoseikkailu.mp
 
 Options include quality, subtitles, download directory, parallel downloads, and dry-run mode.
 Press `d` on the season or episode selection screens, or select `Download directory` in the options screen, to type a new folder.
+Existing completed media files are skipped automatically, so re-running the same series will not download duplicates.
 
 The selected output folder, quality, subtitle setting, and parallel download count are saved to:
 

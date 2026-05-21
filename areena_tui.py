@@ -21,6 +21,22 @@ AREENA_ORIGIN = "https://areena.yle.fi"
 PLAYER_APP_ID = "player_static_prod"
 PLAYER_APP_KEY = "8930d72170e48303cf5f3867780d549b"
 CONFIG_PATH = Path.home() / ".config" / "areena-scraper" / "config.json"
+MEDIA_EXTENSIONS = {
+    ".3gp",
+    ".avi",
+    ".flv",
+    ".m4v",
+    ".mkv",
+    ".mov",
+    ".mp4",
+    ".mpeg",
+    ".mpg",
+    ".ogg",
+    ".ogv",
+    ".ts",
+    ".webm",
+    ".wmv",
+}
 
 
 @dataclass
@@ -420,6 +436,14 @@ def output_template(series: str, ep: Episode) -> str:
     return str(Path(clean_filename(series)) / season_dir / f"{prefix}{clean_filename(ep.title)}.%(ext)s")
 
 
+def existing_media_path(series: str, ep: Episode, output_dir: str) -> Path | None:
+    pattern = output_template(series, ep).replace("%(ext)s", "*")
+    for path in sorted(Path(output_dir).glob(pattern)):
+        if path.is_file() and path.suffix.lower() in MEDIA_EXTENSIONS and path.stat().st_size > 0:
+            return path
+    return None
+
+
 def parse_int(value: str) -> int | None:
     match = re.search(r"\d+", value or "")
     return int(match.group(0)) if match else None
@@ -433,6 +457,11 @@ def download_worker(series: str, options: Options, jobs: queue.Queue, events: qu
             return
         rel_template = output_template(series, ep)
         url = f"https://areena.yle.fi/{ep.item_id}"
+        existing = existing_media_path(series, ep, options.output_dir)
+        if existing:
+            events.put(("skip", ep.item_id, f"exists: {existing}"))
+            jobs.task_done()
+            continue
         if options.dry_run:
             events.put(("done", ep.item_id, f"DRY {rel_template}"))
             jobs.task_done()
@@ -480,7 +509,7 @@ def progress_screen(stdscr, series: str, episodes: list[Episode], options: Optio
     while done < len(selected):
         try:
             kind, item_id, message = events.get(timeout=0.2)
-            if kind in ("done", "error"):
+            if kind in ("done", "error", "skip"):
                 done += 1
             status[item_id] = f"{kind}: {message}"
             log.append(f"{item_id} {kind}: {message}")
